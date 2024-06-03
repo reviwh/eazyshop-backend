@@ -1,0 +1,161 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["relationJoins"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id            Int             @id @default(autoincrement())
+  email         String          @unique
+  password      String
+  token         String
+  isVerified    Boolean         @default(false)
+  createdAt     DateTime        @default(now()) @db.Timestamp
+  updatedAt     DateTime        @default(now()) @updatedAt @db.Timestamp
+  UserProfile   UserProfile[]
+  Cart          Cart[]
+  Order         Order[]
+  Address       Address[]
+  Favorite      Favorite[]
+  ProductReview ProductReview[]
+  Notifications Notifications[]
+}
+
+model UserProfile {
+  email String @id
+  name  String @db.VarChar(255)
+  phone String @db.VarChar(13)
+  image String
+  User  User   @relation(fields: [email], references: [email], onDelete: Cascade, onUpdate: Cascade)
+}
+
+model Address {
+  userId  Int
+  name    String
+  address String @db.Text
+  User    User   @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([userId, name])
+}
+
+model Notifications {
+  id          Int              @id @default(autoincrement())
+  userId      Int
+  type        NotificationType @default(COMMON)
+  title       String           @db.VarChar(255)
+  description String           @db.Text
+  createdAt   DateTime         @default(now()) @db.Timestamp
+  user        User             @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+}
+
+enum NotificationType {
+  COMMON
+  PURCHASED
+  SALE
+  PACKAGE
+}
+
+model Category {
+  name    String    @id
+  image   String    @default("")
+  Product Product[]
+}
+
+model Product {
+  id            Int             @id @default(autoincrement())
+  name          String          @db.VarChar(255)
+  stock         Int             @default(0)
+  color         String
+  description   String          @db.Text
+  category      String
+  price         Decimal         @db.Decimal(10, 2)
+  Cart          Cart[]
+  Order         Order[]
+  Favorite      Favorite[]
+  Category      Category        @relation(fields: [category], references: [name], onDelete: NoAction, onUpdate: Cascade)
+  ProductReview ProductReview[]
+  ProductImage  ProductImage[]
+}
+
+model ProductImage {
+  productId Int
+  image     String
+  Product   Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([productId, image])
+}
+
+model Favorite {
+  productId Int
+  userId    Int
+  createdAt DateTime @default(now()) @db.Timestamp
+  User      User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  Product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([productId, userId])
+}
+
+model ProductReview {
+  id        Int     @id @default(autoincrement())
+  userId    Int
+  productId Int
+  rating    Int
+  comment   Int
+  User      User    @relation(fields: [userId], references: [id], onDelete: NoAction, onUpdate: Cascade)
+  Product   Product @relation(fields: [productId], references: [id], onDelete: NoAction, onUpdate: Cascade)
+}
+
+model Order {
+  id         Int          @id @default(autoincrement())
+  productId  Int
+  color      String       @db.Char(6)
+  qty        Int
+  price      Decimal      @db.Decimal(10, 2)
+  address    String       @db.Text
+  userId     Int
+  User       User         @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  Product    Product      @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  OrderTrack OrderTrack[]
+}
+
+enum OrderStatus {
+  ON_PROGRESS
+  COMPLETED
+}
+
+model OrderTrack {
+  orderId   Int            @id
+  title     String
+  type      OrderTrackType
+  createdAt DateTime       @default(now()) @db.Timestamp
+  order     Order          @relation(fields: [orderId], references: [id], onDelete: Restrict, onUpdate: Cascade)
+}
+
+enum OrderTrackType {
+  SHOP
+  DELIVERY
+  HOUSER
+}
+
+model Cart {
+  id        Int     @id @default(autoincrement())
+  productId Int
+  color     String  @db.Char(6)
+  qty       Int
+  price     Decimal @db.Decimal(10, 2)
+  userId    Int
+  User      User    @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  Product   Product @relation(fields: [productId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@unique([userId, productId])
+}
